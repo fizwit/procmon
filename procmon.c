@@ -40,7 +40,7 @@
 #include <linux/cn_proc.h>
 #include <linux/a.out.h>
 
-
+#define VERSION "1.1.0"   /* change field name host to node */
 int  DEBUG = 0;  /* FLAG set if cmd line arg is specifified */  
 
 static char* PID_FILE = "/var/run/proc_mon.pid";
@@ -271,7 +271,7 @@ get_cmdline(pid_t pid)
           cmdline[j++] = buf[i];
     cmdline[j] = '\0';
     close(fd);
-    count = snprintf(outbuf, BIGBUF, "{\"timestamp\": \"%s\", \"host\": \"%s\", \"pid\": %ld, %s, \"cmdline\": \"%s\"}", 
+    count = snprintf(outbuf, BIGBUF, "{\"timestamp\": \"%s\", \"node\": \"%s\", \"pid\": %ld, %s, \"cmdline\": \"%s\"}", 
             ISO8601_timestamp(), Hostname, (long)pid, json, cmdline);
     if (count < 0 || count > BIGBUF)
            syslog(LOG_NOTICE, "error output buffer truncated: %s", outbuf);
@@ -378,12 +378,17 @@ process_args(int argc, const char *argv[])
     int i;
 
     for(i=1; i<argc; i++)
+        if ( !strcmp(argv[i], "--version") ) {
+           printf("%s  version: %s\n", argv[0], VERSION);
+           exit(EXIT_SUCCESS);
+        }
+        else
         if ( !strcmp(argv[i], "--help") )
            print_help(argv[0]);
         else 
         if ( !strcmp(argv[i], "--debug") )
            DEBUG == 1;
-        else
+        else 
         if  ( !strcmp(argv[i], "--daemon") ) {
            daemon_init();
            fd_pid = write_pid();
