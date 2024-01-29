@@ -1,30 +1,28 @@
-
-# Make file for procmon
+# Makefile for procmon
 CC=gcc
 CFLAGS="-O"
-TARGET := /usr/local/
+TARGET := /usr/local
+
+all: clean procmon
 
 procmon : procmon.c
-	$(CC) $(CFLAGS) $< -o $@ 
-
-all: 
-	procmon
-	install
+	${CC} ${CFLAGS} $< -o $@
 
 # install as root
 install: procmon
-	cp -f procmon $(TARGET)bin
-	if ! test -d $(TARGET)/man/man8; then
-	    mkdir $(TARGET)/man/man8
-	fi
-	cp -f etc/procmon.8.gz $(TARGET)man/man8
-	cp -f etc/procmon.init /etc/init.d
+	cp -f procmon ${TARGET}/bin
+	mkdir -p ${TARGET}/man/man8
+	cp -f etc/procmon.8.gz ${TARGET}/man/man8
 	cp -f etc/procmon.logrotate /etc/logrotate.d
 	cp -f etc/30-procmon.conf /etc/rsyslog.d
-	update-rc.d promon defaults
-	service rsyslog restart
-	service procmon start
-
-
+	cp -f etc/procmon.service /etc/systemd/system
+	systemctl daemon-reload
+	systemctl enable procmon
+	systemctl start procmon
+	if systemctl list-unit-files --type=service | grep -q '^rsyslog.service'; then \
+	  systemctl restart rsyslog; \
+	else \
+	  echo "rsyslog service not found, skipping rsyslog restart"; \
+	fi
 clean:
-	rm -r procmon
+	rm -f procmon

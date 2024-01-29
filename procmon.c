@@ -1,23 +1,23 @@
-/* 
+/*
  *  proc_mon.c
  *
  *  2016.01.16  John Dey
  *
- *  Log user level commands with command line arguments. Log messages 
+ *  Log user level commands with command line arguments. Log messages
  *  are written in JSON format to /var/log/proc_mon.log. Listen to all
  *  kernel process events with proc connector.  proc_mon receives notification
  *  of all process events from the kernel.
  *
- *  Process events are delivered through a socket-based 
- *  interface by reading instances of struct proc_event defined in the 
- *  kernel header. Netlink is used to transfer information between kernel 
- *  modules and user space processes.  
+ *  Process events are delivered through a socket-based
+ *  interface by reading instances of struct proc_event defined in the
+ *  kernel header. Netlink is used to transfer information between kernel
+ *  modules and user space processes.
  *
  *  Filter process events for EXEC and only log processes messages from
  *  non-root users.
  *
- *  Most of the code is liberally copied from Matt Helsley's proc 
- *  connector test code. 
+ *  Most of the code is liberally copied from Matt Helsley's proc
+ *  connector test code.
  *
  *  improve by filtering at Kernel level before messages are sent
  */
@@ -38,21 +38,21 @@
 #include <linux/netlink.h>
 #include <linux/connector.h>
 #include <linux/cn_proc.h>
-#include <linux/a.out.h>
+// include <linux/a.out.h> outdated on newer kernels
 
 #define VERSION "1.1.0"   /* change field name host to node */
-int  DEBUG = 0;  /* FLAG set if cmd line arg is specifified */  
+int  DEBUG = 0;  /* FLAG set if cmd line arg is specifified */
 
 static char* PID_FILE = "/var/run/proc_mon.pid";
 char Hostname[1024];
 void get_cmdline(pid_t pid);
-int  fd_pid; 
+int  fd_pid;
 
 /*
  * connect to netlink
  * returns netlink socket, or -1 on error
  */
-static int 
+static int
 nl_connect()
 {
     int rc;
@@ -83,7 +83,7 @@ nl_connect()
  * enable bool:  Listen/Ignore
  *
  */
-static int 
+static int
 set_proc_ev_listen(int nl_sock, bool enable)
 {
     int rc;
@@ -119,7 +119,7 @@ set_proc_ev_listen(int nl_sock, bool enable)
  * handle a single process event
  */
 static volatile bool need_exit = false;
-static int 
+static int
 handle_proc_ev(int nl_sock)
 {
     int rc;
@@ -137,7 +137,7 @@ handle_proc_ev(int nl_sock)
             /* shutdown? */
             return 0;
         } else if (rc == -1) {
-            if (errno == EINTR) 
+            if (errno == EINTR)
                 continue;
             perror("netlink recv");
             return -1;
@@ -168,7 +168,7 @@ ISO8601_timestamp()
        uct_tm->tm_min,
        uct_tm->tm_sec );
    return ts;
-}   
+}
 
 #define CMDSZ 4096    /* length of /proc/pid/cmdline */
 #define BUFSZ 8192    /* twice size of PAGESIZE */
@@ -187,13 +187,13 @@ static char *outputs[TargetLen] = {"name",  "ppid",  "uid"};  /* output formated
  *
  * Note: /proc/pid/cmdline is 4096 in size.  defined as PAGE_SIZE in Linux
  *
- * Perform minimal cleanup of 'cmdline' for JSON output; 
+ * Perform minimal cleanup of 'cmdline' for JSON output;
  *   escape double quote " becomes \"
  *   escape escape char \ becomes \\
- *   and remove control charaters. 
- *  
+ *   and remove control charaters.
+ *
  * This routine is longer an unglier that it should be. All work is performed
- * within this one routine during an interupt. 
+ * within this one routine during an interupt.
  */
 #define FLEN 32
 void
@@ -237,7 +237,7 @@ get_cmdline(pid_t pid)
                 t = p;
                 while(*t && !isspace(*t)) ++t;
                 *t = '\0';
-                if ( i == 2 && *p == '0') {  /* UID=0 Ignore root processes */ 
+                if ( i == 2 && *p == '0') {  /* UID=0 Ignore root processes */
                    close(fd);
                    close(fd_status);
                    return;
@@ -251,27 +251,27 @@ get_cmdline(pid_t pid)
         while(*ptr) ++ptr; ++ptr; /* advance to end of string */
     }
     close(fd_status);
-    /* 
+    /*
      * fix cmdline
      */
     if ( (slen = (int)read(fd, buf, CMDSZ)) == -1) {
        syslog(LOG_NOTICE, "could not read: %s", fname_cmd);
        return;
     }
-    for(i=0,j=0; i<slen; i++) /* convert cmdline to single string and make JSON safe */ 
+    for(i=0,j=0; i<slen; i++) /* convert cmdline to single string and make JSON safe */
        if (buf[i] == '\0')
-          cmdline[j++] = ' '; 
+          cmdline[j++] = ' ';
        else if (buf[i] < 32 || buf[i] > 126 ) /* remove control char */
           continue;
        else if ( buf[i] == '"' || buf[i] == '\\') {
-          cmdline[j++] = '\\'; 
+          cmdline[j++] = '\\';
           cmdline[j++] = buf[i];
        }
        else
           cmdline[j++] = buf[i];
     cmdline[j] = '\0';
     close(fd);
-    count = snprintf(outbuf, BIGBUF, "{\"timestamp\": \"%s\", \"node\": \"%s\", \"pid\": %ld, %s, \"cmdline\": \"%s\"}", 
+    count = snprintf(outbuf, BIGBUF, "{\"timestamp\": \"%s\", \"node\": \"%s\", \"pid\": %ld, %s, \"cmdline\": \"%s\"}",
             ISO8601_timestamp(), Hostname, (long)pid, json, cmdline);
     if (count < 0 || count > BIGBUF)
            syslog(LOG_NOTICE, "error output buffer truncated: %s", outbuf);
@@ -279,9 +279,9 @@ get_cmdline(pid_t pid)
 }
 
 /*
- * TERM and INT both cuase us to terminate 
+ * TERM and INT both cuase us to terminate
  */
-static void 
+static void
 on_sigint(int unused)
 {
     syslog(LOG_NOTICE, "terminated");
@@ -295,9 +295,9 @@ print_help(const char* name)
 {
     printf("%s: Monitor kernel Proc Connector.\n", name);
     fputs(" write non-root Exec calls to /var/log/proc_mon.log\n", stdout);
-    fputs(" --help print this message\n", stdout); 
-    fputs(" --debug write messages to to standard out stay if forground\n", stdout); 
-    fputs(" --daemon detach process and write messages to logfile\n", stdout); 
+    fputs(" --help print this message\n", stdout);
+    fputs(" --debug write messages to to standard out stay if forground\n", stdout);
+    fputs(" --daemon detach process and write messages to logfile\n", stdout);
     fputs("  debug and daemon modes are exclusive\n", stdout);
     exit(EXIT_SUCCESS);
 }
@@ -306,7 +306,7 @@ print_help(const char* name)
  * Save to remove this code with systemd (and update main)
  */
 
-static void 
+static void
 daemon_init()
 {
     pid_t pid;
@@ -320,7 +320,7 @@ daemon_init()
     /* Fork off the parent process */
     if ((pid = fork()) < 0)
         exit(EXIT_FAILURE); /* error */
-    else if (pid != 0)          
+    else if (pid != 0)
         exit(EXIT_SUCCESS); /* Success: terminate the parent */
 
     /* On success: The child process becomes session leader */
@@ -385,17 +385,17 @@ process_args(int argc, const char *argv[])
         else
         if ( !strcmp(argv[i], "--help") )
            print_help(argv[0]);
-        else 
+        else
         if ( !strcmp(argv[i], "--debug") )
            DEBUG == 1;
-        else 
+        else
         if  ( !strcmp(argv[i], "--daemon") ) {
            daemon_init();
            fd_pid = write_pid();
         }
 }
 
-int 
+int
 main(int argc, const char *argv[])
 {
     int nl_sock;
@@ -404,9 +404,23 @@ main(int argc, const char *argv[])
     process_args(argc, argv);
 
     /* Catch, ignore and handle signals */
-    signal(SIGINT, &on_sigint);
-    signal(SIGHUP, &on_sigint);
-    siginterrupt(SIGINT, true);
+    // This is outdated
+    // signal(SIGINT, &on_sigint);
+    // signal(SIGHUP, &on_sigint);
+    // siginterrupt(SIGINT, true);
+    //
+    struct sigaction sa;
+    sa.sa_handler = &on_sigint;
+    sa.sa_flags = SA_RESTART; // Automatically restart certain system calls
+    sigemptyset(&sa.sa_mask);
+
+    if (sigaction(SIGINT, &sa, NULL) == -1) {
+        perror("Error: cannot handle SIGINT"); // Should not happen
+    }
+
+    if (sigaction(SIGHUP, &sa, NULL) == -1) {
+        perror("Error: cannot handle SIGHUP"); // Should not happen
+    }
 
     gethostname(Hostname, 1024);
 
@@ -433,3 +447,4 @@ out:
     close(nl_sock);
     exit(rc);
 }
+
