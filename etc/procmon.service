@@ -1,0 +1,10 @@
+[Unit]
+Description=Process Monitoring Service
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/procmon
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -1,12 +1,12 @@
 #
 #  procmon logrotate configuration file
-#  remove pro_mon data every week
+#  remove pro_mon data every day
 #
 #  place this file in /etc/logrotate.d
 #
 /var/log/procmon {
     su syslog syslog
-    weekly
+    daily
     copytruncate
     rotate 0
 }
